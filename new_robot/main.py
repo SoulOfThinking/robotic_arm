@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from gripper import Gripper
 from shapely.geometry import Point, Polygon
+import utils as tools
 
 # 配置音频参数
 FORMAT = pyaudio.paInt16
@@ -160,13 +161,16 @@ def pipeline_visual(rob, gripper):
     async def release():
         await gripper.move(0, 255, 255)
     
-    record()
-
-    command = f"hear -d -i {WAVE_OUTPUT_FILENAME} -l zh-CN"
+    record()# 记录音频文件，文件名为output.wav
+    command = tools.stt(WAVE_OUTPUT_FILENAME)
+    print(command)
+   #  command = f"hear -d -i {WAVE_OUTPUT_FILENAME} -l zh-CN"
 
     try:
-        audio_text = run_command(command)
+        # audio_text = run_command(command)
+        audio_text = command
     except Exception:
+        print("run_command")
         raise KeyboardInterrupt
     print(nt()+"识别语音：", audio_text.replace("\n", ""))
 
@@ -207,14 +211,20 @@ def pipeline_visual(rob, gripper):
         # 检查目标位置是否可达
         if not is_pos_valid(targ_pos):
             print(nt()+"目标位置不可到达:", targ_pos)
-            subprocess.Popen(f"say -v Lilian 抱歉，目标位置不可到达", shell=True)
+            # subprocess.Popen(f"say -v Lilian 抱歉，目标位置不可到达", shell=True)
+            tools.tts("抱歉，目标位置不可到达!","target_not_get.wav")
+            tools.play_wav_file("target_not_get.wav")
             return
         if not is_pos_valid(obj_pos):
             print(nt()+"物体位置不可到达:", obj_pos)
-            subprocess.Popen(f"say -v Lilian 抱歉，物体位置不可到达", shell=True)
+            # subprocess.Popen(f"say -v Lilian 抱歉，物体位置不可到达", shell=True)
+            tools.tts("抱歉，物体位置不可到达!","object_not_get.wav")
+            tools.play_wav_file("object_not_get.wav")
             return
 
-        subprocess.Popen(f"say -v Lilian {msg}", shell=True) # 语音回复
+        # subprocess.Popen(f"say -v Lilian {msg}", shell=True) # 语音回复
+        tools.tts(msg,"msg.wav")
+        tools.play_wav_file("msg.wav")
 
         if dir == "at": # 放在位置上
             cord = (targ_pos[0], targ_pos[1])
@@ -260,7 +270,9 @@ def pipeline_visual(rob, gripper):
     elif action == "move": # 移动机械臂
         if dir not in ["front", "back", "left", "right", "up", "down"]:
             print(nt()+"目标位置格式错误")
-            subprocess.Popen(f"say -v Lilian 抱歉，没有听懂要移动到哪里", shell=True)
+            # subprocess.Popen(f"say -v Lilian 抱歉，没有听懂要移动到哪里", shell=True)
+            tools.tts("抱歉，没有听懂要移动到哪里","move_not_hear.wav")
+            tools.play_wav_file("move_not_hear.wav")
             return
         if type(targ) == int:
             targ_pos = targ/100.0
@@ -286,10 +298,14 @@ def pipeline_visual(rob, gripper):
 
         if not is_pos_valid(target):
             print(nt()+"目标位置不可到达:", target)
-            subprocess.Popen(f"say -v Lilian 抱歉，目标位置不可到达", shell=True)
+       #     subprocess.Popen(f"say -v Lilian 抱歉，目标位置不可到达", shell=True)
+            tools.tools.tts("抱歉，目标位置不可到达","target_not_catch.wav")
+            tools.play_wav_file("target_not_catch.wav")            
             return
 
-        subprocess.Popen(f"say -v Lilian {msg}", shell=True) # 语音回复
+      #  subprocess.Popen(f"say -v Lilian {msg}", shell=True) # 语音回复
+        tools.tts(msg,"msg.wav")
+        tools.play_wav_file("msg.wav")         
         rob.movel(target, acc=1, vel=0.5) # 移动到目标位置
     elif action == "grab":
         visual.cam_capture_frame()
@@ -302,10 +318,14 @@ def pipeline_visual(rob, gripper):
 
         if not is_pos_valid(pos):
             print(nt()+"物体位置不可到达:", pos)
-            subprocess.Popen(f"say -v Lilian 抱歉，物体位置不可到达", shell=True)
+        #    subprocess.Popen(f"say -v Lilian 抱歉，物体位置不可到达", shell=True)
+            tools.tts("抱歉，物体位置不可到达","object_not_catch.wav")
+            tools.play_wav_file("object_not_catch.wav") 
             return
 
-        subprocess.Popen(f"say -v Lilian {msg}", shell=True) # 语音回复
+      #  subprocess.Popen(f"say -v Lilian {msg}", shell=True) # 语音回复
+        tools.tts(msg,"msg.wav")
+        tools.play_wav_file("msg.wav") 
 
         rob.movel((pos[0], pos[1], 0.1, 0, PI, 0), acc=1, vel=1) # 移动到物体上方
         rob.movel((pos[0], pos[1], 0.005, 0, PI, 0), acc=1, vel=0.1) # 夹爪下移
@@ -316,7 +336,9 @@ def pipeline_visual(rob, gripper):
 
         rob.movel((pos[0], pos[1], 0.1, 0, PI, 0), acc=3, vel=1) # 夹爪上移
     elif action == "put":
-        subprocess.Popen(f"say -v Lilian {msg}", shell=True)
+        # subprocess.Popen(f"say -v Lilian {msg}", shell=True)
+        tools.tts(msg,"msg.wav")
+        tools.play_wav_file("msg.wav") 
         pos = rob.getl()
         rob.movel((pos[0], pos[1], 0.005, 0, PI, 0), acc=1, vel=1)
 
@@ -412,7 +434,10 @@ def init(full=False, annotation=False):
     rob.set_tcp(para.UR_TCP)
     rob.set_payload(para.UR_PAYLOAD, para.UR_PAYLOAD_CENTER)
     print(nt()+f"已连接到机械臂：{para.UR_IP}, 位于{rob.getl()}")
+    #  print("连接到机械臂")
+    
     rob.movel(para.UR_TPOSE["start"], acc=0.5, vel=1)
+
     print(nt()+"移动到初始位置")
     # rob.close()
 
@@ -452,7 +477,7 @@ if __name__ == "__main__":
 
         while True:
             pipeline_visual(rob, gripper)
-        # test(rob, gripper)
+            # test(rob, gripper)
         # plot_test()
         # test_mapping(rob=None, draw_table=False)
     except KeyboardInterrupt:
